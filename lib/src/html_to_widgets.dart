@@ -521,6 +521,16 @@ class WidgetsHTMLDecoder {
     final delta = <TextSpan>[];
     final children = element.nodes.toList();
     for (final child in children) {
+      if (level == 1) {
+        return SizedBox(
+          width: double.infinity,
+          child: Header(
+            text: child.text,
+            level: 0,
+          ),
+        );
+      }
+
       if (child is dom.Element) {
         final attributes =
             await _parserFormattingElementAttributes(child, baseTextStyle);
