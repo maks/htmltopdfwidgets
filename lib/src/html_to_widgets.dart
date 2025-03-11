@@ -672,7 +672,17 @@ class WidgetsHTMLDecoder {
         }
         final localImage = File(src);
         if (await localImage.exists()) {
-          return Image(MemoryImage(await localImage.readAsBytes()));
+          final memImage = MemoryImage(await localImage.readAsBytes());
+          const double MAX_PAGE_HEIGHT = 714;
+          final height = memImage.height ?? 0;
+          return Image(
+            MemoryImage(
+              await localImage.readAsBytes(),
+            ),
+            alignment: customStyles.imageAlignment,
+            height:
+                height > MAX_PAGE_HEIGHT ? MAX_PAGE_HEIGHT : height.toDouble(),
+          );
         }
       }
       return Text("");
