@@ -22,6 +22,37 @@ class InlineTagStyle {
   });
 }
 
+
+class BlockTagStyle {
+  final PdfColor? textColor;
+  final PdfColor? backgroundColor;
+  final PdfColor? borderColor;
+  final double borderWidth;
+  final double? padding;
+  final double? margin;
+  final double? borderRadius;
+  final FontWeight? fontWeight;
+  final FontStyle? fontStyle;
+  final double? fontSize;
+  final TextAlign? textAlign;
+  final double? lineHeight;
+
+  const BlockTagStyle({
+    this.textColor,
+    this.backgroundColor,
+    this.borderColor,
+    this.borderWidth = 1.0,
+    this.padding,
+    this.margin,
+    this.borderRadius,
+    this.fontWeight,
+    this.fontStyle,
+    this.fontSize,
+    this.textAlign,
+    this.lineHeight,
+  });
+}
+
 //apply custom styles to html stylee
 class HtmlTagStyle {
   //bold  style that will merge with default style
@@ -93,6 +124,8 @@ class HtmlTagStyle {
   final double inlineCodePadding;
   // Inline class-based styles (applies to span with class)
   final Map<String, InlineTagStyle> inlineClassStyles;
+  // Block class-based styles (applies to any element with class)
+  final Map<String, BlockTagStyle> blockClassStyles;
   // Inline button text color
   final PdfColor? inlineButtonTextColor;
   // Inline button background color
@@ -174,6 +207,7 @@ class HtmlTagStyle {
     this.inlineCodeBorderWidth = 1.0,
     this.inlineCodePadding = 2.0,
     this.inlineClassStyles = const {},
+    this.blockClassStyles = const {},
     this.inlineButtonTextColor,
     this.inlineButtonBackgroundColor,
     this.inlineButtonBorderColor,

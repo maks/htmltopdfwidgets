@@ -288,8 +288,8 @@ class PdfBuilder {
             }
 
             final len = getLength(cell);
-            maxColChars[i] =
-                (maxColChars[i] ?? 0) < len ? len : maxColChars[i]!;
+            final current = maxColChars[i] ?? 0;
+            maxColChars[i] = len > current ? len : current;
           }
         }
       }
@@ -848,6 +848,10 @@ class PdfBuilder {
   /// VERY conservative - only headers and simple blockquotes
   /// Paragraphs, divs, and other blocks may contain long content that exceeds page height
   bool _isSmallBlock(RenderNode node, List<pw.Widget> children) {
+    if (_hasBlockClassStyle(node)) {
+      return true;
+    }
+
     // Only headers are truly guaranteed to be small
     if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].contains(node.tagName)) {
       return true;
@@ -976,6 +980,17 @@ class PdfBuilder {
       buffer.write(_collectInlineText(child));
     }
     return buffer.toString();
+  }
+
+  bool _hasBlockClassStyle(RenderNode node) {
+    if (tagStyle.blockClassStyles.isEmpty) return false;
+    final classAttr = node.attributes['class'];
+    if (classAttr == null || classAttr.isEmpty) return false;
+    for (final className in classAttr.split(RegExp(r'\s+'))) {
+      if (className.isEmpty) continue;
+      if (tagStyle.blockClassStyles.containsKey(className)) return true;
+    }
+    return false;
   }
 
   bool _hasClass(RenderNode node, String className) {
@@ -1192,6 +1207,9 @@ class PdfBuilder {
     return pw.BoxDecoration(
       color: style.backgroundColor,
       border: style.border,
+      borderRadius: style.borderRadius != null
+          ? pw.BorderRadius.circular(style.borderRadius!)
+          : null,
     );
   }
 
