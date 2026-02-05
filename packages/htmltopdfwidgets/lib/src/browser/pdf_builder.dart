@@ -727,6 +727,26 @@ class PdfBuilder {
   }
 
   Future<List<pw.Widget>> _buildBlockChild(RenderNode node) async {
+    // Special handling for top-level headers to emit PDF outlines/TOC entries.
+    if (node.tagName == 'h1') {
+      final text = _collectText(node).trim();
+      if (text.isEmpty) {
+        return [];
+      }
+
+      return [
+        pw.Header(
+          level: 0,
+          title: text,
+          text: text,
+          textStyle: _mapTextStyle(node.style),
+          decoration: _buildBoxDecoration(node.style),
+          margin: node.style.margin,
+          padding: node.style.padding,
+        ),
+      ];
+    }
+
     // This node is a block element.
     // We need to apply its styles (padding, margin, border, background)
     // and then process its children.
