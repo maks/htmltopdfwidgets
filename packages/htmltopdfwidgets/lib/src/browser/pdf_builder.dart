@@ -969,6 +969,21 @@ class PdfBuilder {
     ];
   }
 
+  String _collectInlineText(RenderNode node) {
+    if (node.text != null) return node.text!;
+    final buffer = StringBuffer();
+    for (final child in node.children) {
+      buffer.write(_collectInlineText(child));
+    }
+    return buffer.toString();
+  }
+
+  bool _hasClass(RenderNode node, String className) {
+    final classAttr = node.attributes['class'];
+    if (classAttr == null || classAttr.isEmpty) return false;
+    return classAttr.split(RegExp(r'\s+')).contains(className);
+  }
+
   void _collectInlineSpans(RenderNode node, List<pw.InlineSpan> spans) {
     if (node.display == Display.none) return;
 
@@ -1006,6 +1021,99 @@ class PdfBuilder {
         child: _buildCheckbox(node),
         baseline: baseline,
       ));
+      return;
+    }
+
+    if (node.tagName == 'span') {
+      InlineTagStyle? classStyle;
+      if (node.attributes.containsKey('class')) {
+        for (final className in node.attributes['class']!.split(RegExp(r'\s+'))) {
+          if (className.isEmpty) continue;
+          final style = tagStyle.inlineClassStyles[className];
+          if (style != null) {
+            classStyle = style;
+            break;
+          }
+        }
+      }
+
+      if (classStyle != null) {
+        if (spans.isNotEmpty) {
+          final lastSpan = spans.last;
+          if (lastSpan is pw.TextSpan) {
+            final lastText = lastSpan.text ?? '';
+            if (lastText.isNotEmpty && !lastText.endsWith(' ')) {
+              spans.add(const pw.TextSpan(text: ' '));
+            }
+          }
+        }
+
+        final textContent = _collectInlineText(node).replaceAll(RegExp(r'\s+'), ' ');
+
+        if (textContent.isNotEmpty) {
+          final baseStyle = _mapTextStyle(node.style).copyWith(
+            background: null,
+            color: classStyle.textColor ?? _mapTextStyle(node.style).color,
+          );
+          final bgColor = classStyle.backgroundColor ?? node.style.backgroundColor;
+          final borderColor = classStyle.borderColor;
+          final borderWidth = classStyle.borderWidth;
+          final padding = classStyle.padding;
+
+          spans.add(pw.WidgetSpan(
+            baseline: 0,
+            child: pw.Container(
+              padding: pw.EdgeInsets.all(padding),
+              decoration: pw.BoxDecoration(
+                color: bgColor,
+                border: borderColor != null && borderWidth > 0
+                    ? pw.Border.all(color: borderColor, width: borderWidth)
+                    : null,
+              ),
+              child: pw.Text(textContent, style: baseStyle),
+            ),
+          ));
+        }
+        return;
+      }
+    }
+
+    if (node.tagName == 'code' && node.display == Display.inline) {
+      if (spans.isNotEmpty) {
+        final lastSpan = spans.last;
+        if (lastSpan is pw.TextSpan) {
+          final lastText = lastSpan.text ?? '';
+          if (lastText.isNotEmpty && !lastText.endsWith(' ')) {
+            spans.add(const pw.TextSpan(text: ' '));
+          }
+        }
+      }
+
+      var textContent = _collectInlineText(node);
+      textContent = textContent.replaceAll(RegExp(r'\s+'), ' ');
+
+      if (textContent.isNotEmpty) {
+        final baseStyle = _mapTextStyle(node.style).copyWith(background: null);
+        final bgColor =
+            tagStyle.inlineCodeBackgroundColor ?? node.style.backgroundColor;
+        final borderColor = tagStyle.inlineCodeBorderColor;
+        final borderWidth = tagStyle.inlineCodeBorderWidth;
+        final padding = tagStyle.inlineCodePadding;
+
+        spans.add(pw.WidgetSpan(
+          baseline: 0,
+          child: pw.Container(
+            padding: pw.EdgeInsets.all(padding),
+            decoration: pw.BoxDecoration(
+              color: bgColor,
+              border: borderColor != null && borderWidth > 0
+                  ? pw.Border.all(color: borderColor, width: borderWidth)
+                  : null,
+            ),
+            child: pw.Text(textContent, style: baseStyle),
+          ),
+        ));
+      }
       return;
     }
 
