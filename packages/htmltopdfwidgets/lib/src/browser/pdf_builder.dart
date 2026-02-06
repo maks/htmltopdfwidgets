@@ -265,14 +265,16 @@ class PdfBuilder {
     }
 
     // Determine border style
+    final border = node.style.border;
     final borderCollapse = node.style.borderCollapse ?? true;
-    final borderColor = node.style.border?.top.color ?? PdfColors.grey600;
-    final borderWidth = node.style.border?.top.width ?? 0.5;
+    final borderColor = border?.top.color ?? PdfColors.grey600;
+    final borderWidth = border?.top.width ?? 0.5;
 
     // Container prevents spanning. Use Padding/SizedBox for margin.
     // Detect if table is potentially larger than a page to avoid TooManyPageException
     // when using FlexColumnWidth (which makes columns narrower and taller)
     final maxColChars = <int, int>{};
+    final fixedColWidths = <int, double>{};
     for (var child in node.children) {
       final rows = (child.tagName == 'tr' ? [child] : child.children);
       for (var row in rows) {
@@ -290,6 +292,13 @@ class PdfBuilder {
             final len = getLength(cell);
             final current = maxColChars[i] ?? 0;
             maxColChars[i] = len > current ? len : current;
+            if (cell.style.width != null) {
+              final w = cell.style.width!;
+              final prev = fixedColWidths[i];
+              if (prev == null || w > prev) {
+                fixedColWidths[i] = w;
+              }
+            }
           }
         }
       }
@@ -310,6 +319,11 @@ class PdfBuilder {
       columnWidths = {};
     } else {
       for (var entry in maxColChars.entries) {
+        final fixedWidth = fixedColWidths[entry.key];
+        if (fixedWidth != null) {
+          columnWidths[entry.key] = pw.FixedColumnWidth(fixedWidth);
+          continue;
+        }
         // Give 3x weight to column with massive content (> 1500 chars)
         final weight = entry.value > 1500 ? 3.0 : 1.0;
         columnWidths[entry.key] = pw.FlexColumnWidth(weight);
@@ -319,12 +333,14 @@ class PdfBuilder {
     return pw.Padding(
       padding: node.style.margin ?? const pw.EdgeInsets.symmetric(vertical: 8),
       child: pw.Table(
-        border: borderCollapse
-            ? pw.TableBorder.all(color: borderColor, width: borderWidth)
-            : pw.TableBorder.symmetric(
-                inside: pw.BorderSide(color: borderColor, width: borderWidth),
-                outside: pw.BorderSide(color: borderColor, width: borderWidth),
-              ),
+        border: border == null
+            ? null
+            : (borderCollapse
+                ? pw.TableBorder.all(color: borderColor, width: borderWidth)
+                : pw.TableBorder.symmetric(
+                    inside: pw.BorderSide(color: borderColor, width: borderWidth),
+                    outside: pw.BorderSide(color: borderColor, width: borderWidth),
+                  )),
         defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
         columnWidths: columnWidths.isEmpty ? null : columnWidths,
         defaultColumnWidth: const pw.FlexColumnWidth(),
@@ -338,13 +354,18 @@ class PdfBuilder {
     final allCellSpans = <List<pw.InlineSpan>>[];
     final cellStyles = <RenderNode>[];
     final alignments = <pw.Alignment>[];
+    final cellHasImage = <bool>[];
     int maxChunks = 1;
 
     // First pass: collect all content and determine split points
     for (var child in node.children) {
       if (child.tagName == 'td' || child.tagName == 'th') {
+        final hasImage = _containsImage(child);
+        cellHasImage.add(hasImage);
         final spans = <pw.InlineSpan>[];
-        _collectInlineSpans(child, spans);
+        if (!hasImage) {
+          _collectInlineSpans(child, spans);
+        }
         allCellSpans.add(spans);
         cellStyles.add(child);
 
@@ -366,12 +387,14 @@ class PdfBuilder {
 
         // Count total chars to see if we split
         int totalLen = 0;
-        for (var s in spans) {
-          if (s is pw.TextSpan) totalLen += (s.text ?? '').length;
-        }
-        if (totalLen > 2000) {
-          final chunks = (totalLen / 1500).ceil();
-          if (chunks > maxChunks) maxChunks = chunks;
+        if (!hasImage) {
+          for (var s in spans) {
+            if (s is pw.TextSpan) totalLen += (s.text ?? '').length;
+          }
+          if (totalLen > 2000) {
+            final chunks = (totalLen / 1500).ceil();
+            if (chunks > maxChunks) maxChunks = chunks;
+          }
         }
       }
     }
@@ -382,7 +405,9 @@ class PdfBuilder {
       for (int i = 0; i < allCellSpans.length; i++) {
         final child = cellStyles[i];
         final isHeader = child.tagName == 'th' || isHeaderRow;
-        final cellContent = _buildCellRichText(allCellSpans[i], isHeader);
+        final cellContent = cellHasImage[i]
+            ? await _buildCellContentWithImages(child, isHeader)
+            : _buildCellRichText(allCellSpans[i], isHeader);
         cells.add(_wrapCell(child, cellContent, alignments[i], isHeader));
       }
       return [
@@ -409,6 +434,17 @@ class PdfBuilder {
         final isHeader = child.tagName == 'th' || isHeaderRow;
         final chunks = splitCellSpans[cellIdx];
 
+        if (cellHasImage[cellIdx]) {
+          if (chunkIdx == 0) {
+            final cellContent =
+                await _buildCellContentWithImages(child, isHeader);
+            cells.add(_wrapCell(child, cellContent, alignments[cellIdx], isHeader));
+          } else {
+            cells.add(pw.SizedBox());
+          }
+          continue;
+        }
+
         if (chunkIdx < chunks.length) {
           final cellContent = _buildCellRichText(chunks[chunkIdx], isHeader);
           // Only show background/decoration on the first chunk row for headers
@@ -424,6 +460,26 @@ class PdfBuilder {
     }
 
     return tableRows;
+  }
+
+
+  bool _containsImage(RenderNode node) {
+    if (node.tagName == 'img') return true;
+    for (final child in node.children) {
+      if (_containsImage(child)) return true;
+    }
+    return false;
+  }
+
+  Future<pw.Widget> _buildCellContentWithImages(
+      RenderNode node, bool isHeader) async {
+    final widgets = await _buildBlockContent(node);
+    if (widgets.isEmpty) return pw.SizedBox();
+    if (widgets.length == 1) return widgets.first;
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: widgets,
+    );
   }
 
   pw.Widget _wrapCell(RenderNode node, pw.Widget content,
