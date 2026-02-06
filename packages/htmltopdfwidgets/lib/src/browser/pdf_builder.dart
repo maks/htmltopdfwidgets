@@ -1167,21 +1167,11 @@ class PdfBuilder {
         final baseStyle = _mapTextStyle(node.style).copyWith(background: null);
         final bgColor =
             tagStyle.inlineCodeBackgroundColor ?? node.style.backgroundColor;
-        final borderColor = tagStyle.inlineCodeBorderColor;
-        final borderWidth = tagStyle.inlineCodeBorderWidth;
-        final padding = tagStyle.inlineCodePadding;
-
-        spans.add(pw.WidgetSpan(
-          baseline: 0,
-          child: pw.Container(
-            padding: pw.EdgeInsets.all(padding),
-            decoration: pw.BoxDecoration(
-              color: bgColor,
-              border: borderColor != null && borderWidth > 0
-                  ? pw.Border.all(color: borderColor, width: borderWidth)
-                  : null,
-            ),
-            child: pw.Text(textContent, style: baseStyle),
+        spans.add(pw.TextSpan(
+          text: textContent,
+          style: baseStyle.copyWith(
+            background:
+                bgColor != null ? pw.BoxDecoration(color: bgColor) : null,
           ),
         ));
       }
