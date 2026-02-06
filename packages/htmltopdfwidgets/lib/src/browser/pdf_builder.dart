@@ -45,7 +45,6 @@ class PdfBuilder {
   /// - Block elements containing only inline content (rendered as [pw.RichText]).
   /// - Generic block elements with mixed content (recursively building children).
   Future<List<pw.Widget>> _buildBlock(RenderNode node) async {
-    print('Building block: ${node.tagName} children:${node.children.length}');
     final widgets = <pw.Widget>[];
 
     if (node.display == Display.none) return widgets;
