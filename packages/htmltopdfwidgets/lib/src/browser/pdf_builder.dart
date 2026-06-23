@@ -84,7 +84,7 @@ class PdfBuilder {
     // Check if this block contains only inline content (text, spans, b, i, etc.)
     // If so, render as RichText widgets (may be split into multiple for page spanning)
     if (_hasOnlyInlineContent(node)) {
-      final richTextWidgets = _buildRichTextFromNode(node);
+      final richTextWidgets = await _buildRichTextFromNode(node);
       if (richTextWidgets.isNotEmpty) {
         return richTextWidgets;
       }
@@ -110,7 +110,7 @@ class PdfBuilder {
         // Handle br tags specially in inline context
         if (child.tagName == 'br') {
           if (inlineGroup.isNotEmpty) {
-            widgets.addAll(_buildRichText(inlineGroup, node.style));
+            widgets.addAll(await _buildRichText(inlineGroup, node.style));
             inlineGroup = [];
           }
           widgets.add(pw.SizedBox(height: 8));
@@ -119,7 +119,7 @@ class PdfBuilder {
         }
       } else {
         if (inlineGroup.isNotEmpty) {
-          widgets.addAll(_buildRichText(inlineGroup, node.style));
+          widgets.addAll(await _buildRichText(inlineGroup, node.style));
           inlineGroup = [];
         }
 
@@ -150,7 +150,7 @@ class PdfBuilder {
     }
 
     if (inlineGroup.isNotEmpty) {
-      widgets.addAll(_buildRichText(inlineGroup, node.style));
+      widgets.addAll(await _buildRichText(inlineGroup, node.style));
     }
 
     return widgets;
@@ -202,9 +202,9 @@ class PdfBuilder {
   /// on a page, allowing the overall content to span pages when placed in MultiPage.
   ///
   /// The chunking is based on span count to approximate page-friendly sizes.
-  List<pw.Widget> _buildRichTextFromNode(RenderNode node) {
+  Future<List<pw.Widget>> _buildRichTextFromNode(RenderNode node) async {
     final spans = <pw.InlineSpan>[];
-    _collectInlineSpans(node, spans);
+    await _collectInlineSpans(node, spans);
 
     if (spans.isEmpty) return [];
 
@@ -369,7 +369,7 @@ class PdfBuilder {
         cellHasImage.add(hasImage);
         final spans = <pw.InlineSpan>[];
         if (!hasImage) {
-          _collectInlineSpans(child, spans);
+          await _collectInlineSpans(child, spans);
         }
         allCellSpans.add(spans);
         cellStyles.add(child);
@@ -586,7 +586,7 @@ class PdfBuilder {
       RenderNode node, bool isOrdered, int index) async {
     // Collect inline content from list item
     final spans = <pw.InlineSpan>[];
-    _collectInlineSpans(node, spans);
+    await _collectInlineSpans(node, spans);
 
     pw.Widget bullet;
     if (isOrdered) {
@@ -997,11 +997,11 @@ class PdfBuilder {
     return result;
   }
 
-  List<pw.Widget> _buildRichText(List<RenderNode> nodes, CSSStyle parentStyle) {
+  Future<List<pw.Widget>> _buildRichText(List<RenderNode> nodes, CSSStyle parentStyle) async {
     final spans = <pw.InlineSpan>[];
 
     for (var node in nodes) {
-      _collectInlineSpans(node, spans);
+      await _collectInlineSpans(node, spans);
     }
 
     if (spans.isEmpty) return [];
@@ -1060,7 +1060,7 @@ class PdfBuilder {
     return classAttr.split(RegExp(r'\s+')).contains(className);
   }
 
-  void _collectInlineSpans(RenderNode node, List<pw.InlineSpan> spans) {
+  Future<void> _collectInlineSpans(RenderNode node, List<pw.InlineSpan> spans) async {
     if (node.display == Display.none) return;
 
     // Handle checkbox inputs as inline widgets
@@ -1125,8 +1125,9 @@ class PdfBuilder {
         }
 
         final textContent = _collectInlineText(node).replaceAll(RegExp(r'\s+'), ' ');
+        final hasImages = _containsImage(node);
 
-        if (textContent.isNotEmpty) {
+        if (textContent.isNotEmpty || hasImages) {
           final baseStyle = _mapTextStyle(node.style).copyWith(
             background: null,
             color: classStyle.textColor ?? _mapTextStyle(node.style).color,
@@ -1135,15 +1136,87 @@ class PdfBuilder {
           final borderColor = classStyle.borderColor;
           final borderWidth = classStyle.borderWidth;
           final padding = classStyle.padding;
+          final borderRadius = classStyle.borderRadius;
 
-          spans.add(pw.WidgetSpan(
-            baseline: 0,
-            child: pw.Container(
+          pw.Widget childWidget;
+          if (hasImages) {
+            // Build a Row with text and image widgets
+            final rowChildren = <pw.Widget>[];
+            if (textContent.isNotEmpty) {
+              rowChildren.add(pw.Text(textContent, style: baseStyle));
+            }
+            for (var child in node.children) {
+              if (child.tagName == 'img') {
+                final imgWidget = await _buildImage(child);
+                rowChildren.add(imgWidget);
+              }
+            }
+            childWidget = pw.Container(
               padding: pw.EdgeInsets.all(padding),
               decoration: pw.BoxDecoration(
                 color: bgColor,
                 border: borderColor != null && borderWidth > 0
                     ? pw.Border.all(color: borderColor, width: borderWidth)
+                    : null,
+                borderRadius: borderRadius != null
+                    ? pw.BorderRadius.circular(borderRadius)
+                    : null,
+              ),
+              child: pw.Row(
+                mainAxisSize: pw.MainAxisSize.min,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: rowChildren,
+              ),
+            );
+          } else {
+            childWidget = pw.Container(
+              padding: pw.EdgeInsets.all(padding),
+              decoration: pw.BoxDecoration(
+                color: bgColor,
+                border: borderColor != null && borderWidth > 0
+                    ? pw.Border.all(color: borderColor, width: borderWidth)
+                    : null,
+                borderRadius: borderRadius != null
+                    ? pw.BorderRadius.circular(borderRadius)
+                    : null,
+              ),
+              child: pw.Text(textContent, style: baseStyle),
+            );
+          }
+
+          spans.add(pw.WidgetSpan(
+            baseline: 0,
+            child: childWidget,
+          ));
+        }
+        return;
+      }
+
+      // Handle spans with CSS rules from <style> blocks
+      // Check if the span's computed style has border or padding from CSS
+      if (node.style.border != null || node.style.padding != null) {
+        final textContent = _collectInlineText(node).replaceAll(RegExp(r'\s+'), ' ');
+        if (textContent.isNotEmpty) {
+          final baseStyle = _mapTextStyle(node.style);
+          final bgColor = node.style.backgroundColor;
+          final border = node.style.border;
+          final padding = node.style.padding;
+          final borderRadius = node.style.borderRadius;
+
+          spans.add(pw.WidgetSpan(
+            baseline: 0,
+            child: pw.Container(
+              padding: padding,
+              decoration: pw.BoxDecoration(
+                color: bgColor,
+                border: border != null
+                    ? pw.Border.all(
+                        color: border.top.color ?? PdfColors.black,
+                        width: border.top.width,
+                      )
+                    : null,
+                borderRadius: borderRadius != null
+                    ? pw.BorderRadius.circular(borderRadius)
                     : null,
               ),
               child: pw.Text(textContent, style: baseStyle),
@@ -1247,7 +1320,7 @@ class PdfBuilder {
         }
       } else {
         // Recurse for nested elements
-        _collectInlineSpans(child, spans);
+        await _collectInlineSpans(child, spans);
       }
     }
   }

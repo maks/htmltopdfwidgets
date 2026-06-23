@@ -12,6 +12,7 @@ class InlineTagStyle {
   final PdfColor? borderColor;
   final double borderWidth;
   final double padding;
+  final double? borderRadius;
 
   const InlineTagStyle({
     this.textColor,
@@ -19,6 +20,7 @@ class InlineTagStyle {
     this.borderColor,
     this.borderWidth = 1.0,
     this.padding = 2.0,
+    this.borderRadius,
   });
 }
 
