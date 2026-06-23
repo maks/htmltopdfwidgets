@@ -27,6 +27,11 @@ class HtmlParser {
   /// Custom styles for specific HTML tags provided by the user.
   final HtmlTagStyle tagStyle;
 
+  /// Custom fonts map for resolving font-family values on heading/code tags.
+  /// When 'heading' is present, h1-h6 get font-family: 'heading'.
+  /// When 'code' is present, code/pre get font-family: 'code'.
+  final Map<String, dynamic>? customFonts;
+
   /// Parsed CSS rules from <style> tags
   final List<css.RuleSet> _styleRules = [];
 
@@ -35,6 +40,9 @@ class HtmlParser {
   /// [htmlString] is the HTML content to parse.
   /// [baseStyle] is the default style for the document root.
   /// [tagStyle] allows overriding default styles for specific tags.
+  /// [customFonts] optional map of custom font family names to Font objects
+  ///   (e.g. {'heading': Font, 'code': Font}). When present, heading and code
+  ///   tags automatically inherit the corresponding font-family.
   HtmlParser({
     required this.htmlString,
     this.baseStyle = const CSSStyle(
@@ -46,6 +54,7 @@ class HtmlParser {
       textDecoration: TextDecoration.none,
     ),
     this.tagStyle = const HtmlTagStyle(),
+    this.customFonts,
   });
 
   /// Parses the HTML string and returns the root [RenderNode].
@@ -170,8 +179,14 @@ class HtmlParser {
   /// Returns the default [CSSStyle] for a given HTML tag.
   ///
   /// This method also applies overrides from [tagStyle].
+  /// When [customFonts] is provided, heading tags (h1-h6) automatically
+  /// get font-family: 'heading', and code/pre tags get font-family: 'code'.
   CSSStyle _getDefaultStyleForTag(String tagName) {
     CSSStyle style;
+    final bool hasHeadingFont = customFonts != null &&
+        customFonts!.containsKey('heading');
+    final bool hasCodeFont = customFonts != null &&
+        customFonts!.containsKey('code');
     switch (tagName.toLowerCase()) {
       case 'h1':
         style = const CSSStyle(
@@ -185,6 +200,9 @@ class HtmlParser {
         if (tagStyle.headingMargins != null &&
             tagStyle.headingMargins!.containsKey(1)) {
           style = style.merge(CSSStyle(margin: tagStyle.headingMargins![1]));
+        }
+        if (hasHeadingFont) {
+          style = style.merge(const CSSStyle(fontFamily: 'heading'));
         }
         return style;
       case 'h2':
@@ -200,6 +218,9 @@ class HtmlParser {
             tagStyle.headingMargins!.containsKey(2)) {
           style = style.merge(CSSStyle(margin: tagStyle.headingMargins![2]));
         }
+        if (hasHeadingFont) {
+          style = style.merge(const CSSStyle(fontFamily: 'heading'));
+        }
         return style;
       case 'h3':
         style = const CSSStyle(
@@ -213,6 +234,9 @@ class HtmlParser {
         if (tagStyle.headingMargins != null &&
             tagStyle.headingMargins!.containsKey(3)) {
           style = style.merge(CSSStyle(margin: tagStyle.headingMargins![3]));
+        }
+        if (hasHeadingFont) {
+          style = style.merge(const CSSStyle(fontFamily: 'heading'));
         }
         return style;
       case 'h4':
@@ -228,6 +252,9 @@ class HtmlParser {
             tagStyle.headingMargins!.containsKey(4)) {
           style = style.merge(CSSStyle(margin: tagStyle.headingMargins![4]));
         }
+        if (hasHeadingFont) {
+          style = style.merge(const CSSStyle(fontFamily: 'heading'));
+        }
         return style;
       case 'h5':
         style = const CSSStyle(
@@ -242,6 +269,9 @@ class HtmlParser {
             tagStyle.headingMargins!.containsKey(5)) {
           style = style.merge(CSSStyle(margin: tagStyle.headingMargins![5]));
         }
+        if (hasHeadingFont) {
+          style = style.merge(const CSSStyle(fontFamily: 'heading'));
+        }
         return style;
       case 'h6':
         style = const CSSStyle(
@@ -255,6 +285,9 @@ class HtmlParser {
         if (tagStyle.headingMargins != null &&
             tagStyle.headingMargins!.containsKey(6)) {
           style = style.merge(CSSStyle(margin: tagStyle.headingMargins![6]));
+        }
+        if (hasHeadingFont) {
+          style = style.merge(const CSSStyle(fontFamily: 'heading'));
         }
         return style;
       case 'p':

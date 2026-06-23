@@ -10,7 +10,13 @@ import 'legacy/html_to_widgets.dart';
 
 // Define a class named HTMLToPdf that extends HtmlCodec. and it contains the converter that convert html string to pdf widgets
 class HTMLToPdf extends HtmlCodec {
+  // Custom fonts map for resolving CSS font-family values.
+  // Maps font family names (as used in CSS) to Font objects.
+  final Map<String, Font>? customFonts;
+
   // Override the convert method from HtmlCodec.
+  HTMLToPdf({this.customFonts});
+
   @override
   Future<List<Widget>> convert(
       //html string that need to be converted
@@ -38,10 +44,14 @@ class HTMLToPdf extends HtmlCodec {
           fontStyle: FontStyle.normal,
           textDecoration: TextDecoration.none,
         ),
+        customFonts: customFonts,
       );
       final renderTree = parser.parse();
       final builder = PdfBuilder(
-          root: renderTree, tagStyle: tagStyle, fontFallback: fontFallback);
+          root: renderTree,
+          tagStyle: tagStyle,
+          fontFallback: fontFallback,
+          customFonts: customFonts);
       return await builder.build();
     }
 
@@ -106,10 +116,14 @@ class HTMLToPdf extends HtmlCodec {
           fontStyle: FontStyle.normal,
           textDecoration: TextDecoration.none,
         ),
+        customFonts: customFonts,
       );
       final renderTree = parser.parse();
       final builder = PdfBuilder(
-          root: renderTree, tagStyle: tagStyle, fontFallback: fontFallback);
+          root: renderTree,
+          tagStyle: tagStyle,
+          fontFallback: fontFallback,
+          customFonts: customFonts);
       return await builder.build();
     }
 
@@ -130,6 +144,11 @@ class HTMLToPdf extends HtmlCodec {
 
 // Define an abstract class named HtmlCodec.
 abstract class HtmlCodec {
+  /// Custom fonts map for resolving CSS font-family values.
+  final Map<String, Font>? customFonts;
+
+  const HtmlCodec({this.customFonts});
+
   //this code defines a class HTMLToPdf that inherits from HtmlCodec
   // and overrides the convert method to convert HTML content into
   // a list of pdf widgets using the WidgetsHTMLDecoder class.
