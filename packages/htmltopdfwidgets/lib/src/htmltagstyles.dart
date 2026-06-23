@@ -11,7 +11,13 @@ class InlineTagStyle {
   final PdfColor? backgroundColor;
   final PdfColor? borderColor;
   final double borderWidth;
+  /// Symmetric padding (applied to all sides). Deprecated in favor of
+  /// [paddingHorizontal] and [paddingVertical].
   final double padding;
+  /// Horizontal padding (left & right). Overrides [padding] for left/right.
+  final double? paddingHorizontal;
+  /// Vertical padding (top & bottom). Overrides [padding] for top/bottom.
+  final double? paddingVertical;
   final double? borderRadius;
 
   const InlineTagStyle({
@@ -20,8 +26,15 @@ class InlineTagStyle {
     this.borderColor,
     this.borderWidth = 1.0,
     this.padding = 2.0,
+    this.paddingHorizontal,
+    this.paddingVertical,
     this.borderRadius,
   });
+
+  /// Resolves the effective horizontal and vertical padding, falling back
+  /// to [padding] when the newer fields are not set.
+  double get effectiveHorizontalPadding => paddingHorizontal ?? padding;
+  double get effectiveVerticalPadding => paddingVertical ?? padding;
 }
 
 

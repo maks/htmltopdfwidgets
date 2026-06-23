@@ -3,7 +3,8 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../htmltagstyles.dart';
 import 'css_style.dart';
-import 'image_builder_io.dart' if (dart.library.html) 'image_builder_web.dart'
+import 'image_builder_io.dart'
+    if (dart.library.html) 'image_builder_web.dart'
     as image_builder;
 import 'render_node.dart';
 
@@ -63,8 +64,9 @@ class PdfBuilder {
     } else if (node.tagName == 'hr') {
       return [
         pw.Divider(
-            color: node.style.border?.bottom.color ?? PdfColors.grey400,
-            thickness: node.style.border?.bottom.width ?? 1.0)
+          color: node.style.border?.bottom.color ?? PdfColors.grey400,
+          thickness: node.style.border?.bottom.width ?? 1.0,
+        ),
       ];
     } else if (node.tagName == 'blockquote') {
       return [await _buildBlockquote(node)];
@@ -126,15 +128,22 @@ class PdfBuilder {
         // Check if child is a list item inside a list
         if (child.tagName == 'li' &&
             (node.tagName == 'ul' || node.tagName == 'ol')) {
-          widgets.add(await _buildListItem(
-              child, node.tagName == 'ol', node.children.indexOf(child)));
+          widgets.add(
+            await _buildListItem(
+              child,
+              node.tagName == 'ol',
+              node.children.indexOf(child),
+            ),
+          );
         } else {
           widgets.addAll(await _buildBlockChild(child));
         }
 
         // Add spacing between block elements
         if (widgets.isNotEmpty && i < node.children.length - 1) {
-          final nextNonEmpty = node.children.skip(i + 1).firstWhere(
+          final nextNonEmpty = node.children
+              .skip(i + 1)
+              .firstWhere(
                 (n) =>
                     n.display != Display.none && n.tagName != '#text' ||
                     (n.text?.trim().isNotEmpty ?? false),
@@ -186,7 +195,7 @@ class PdfBuilder {
           'nav',
           'main',
           'figure',
-          'figcaption'
+          'figcaption',
         ].contains(child.tagName)) {
           return false;
         }
@@ -218,12 +227,14 @@ class PdfBuilder {
     if (totalLen > 2000 || spans.length > 20) {
       final chunks = _splitSpans(spans, 1500);
       return chunks
-          .map((chunk) => pw.RichText(
-                overflow: pw.TextOverflow.span,
-                text: pw.TextSpan(children: chunk),
-                textAlign: node.style.textAlign ?? pw.TextAlign.left,
-                textDirection: node.style.textDirection,
-              ))
+          .map(
+            (chunk) => pw.RichText(
+              overflow: pw.TextOverflow.span,
+              text: pw.TextSpan(children: chunk),
+              textAlign: node.style.textAlign ?? pw.TextAlign.left,
+              textDirection: node.style.textDirection,
+            ),
+          )
           .toList();
     }
 
@@ -233,7 +244,7 @@ class PdfBuilder {
         text: pw.TextSpan(children: spans),
         textAlign: node.style.textAlign ?? pw.TextAlign.left,
         textDirection: node.style.textDirection,
-      )
+      ),
     ];
   }
 
@@ -251,9 +262,13 @@ class PdfBuilder {
           child.tagName == 'thead' ||
           child.tagName == 'tfoot') {
         if (child.tagName == 'tr') {
-          rows.addAll(await _buildTableRows(child,
+          rows.addAll(
+            await _buildTableRows(
+              child,
               isHeaderRow:
-                  isFirstRow && child.children.any((c) => c.tagName == 'th')));
+                  isFirstRow && child.children.any((c) => c.tagName == 'th'),
+            ),
+          );
           isFirstRow = false;
         } else {
           // Handle thead/tbody/tfoot children
@@ -261,7 +276,8 @@ class PdfBuilder {
           for (var grandChild in child.children) {
             if (grandChild.tagName == 'tr') {
               rows.addAll(
-                  await _buildTableRows(grandChild, isHeaderRow: isHead));
+                await _buildTableRows(grandChild, isHeaderRow: isHead),
+              );
             }
           }
           if (isHead) isFirstRow = false;
@@ -341,11 +357,17 @@ class PdfBuilder {
         border: border == null
             ? null
             : (borderCollapse
-                ? pw.TableBorder.all(color: borderColor, width: borderWidth)
-                : pw.TableBorder.symmetric(
-                    inside: pw.BorderSide(color: borderColor, width: borderWidth),
-                    outside: pw.BorderSide(color: borderColor, width: borderWidth),
-                  )),
+                  ? pw.TableBorder.all(color: borderColor, width: borderWidth)
+                  : pw.TableBorder.symmetric(
+                      inside: pw.BorderSide(
+                        color: borderColor,
+                        width: borderWidth,
+                      ),
+                      outside: pw.BorderSide(
+                        color: borderColor,
+                        width: borderWidth,
+                      ),
+                    )),
         defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
         columnWidths: columnWidths.isEmpty ? null : columnWidths,
         defaultColumnWidth: const pw.FlexColumnWidth(),
@@ -354,8 +376,10 @@ class PdfBuilder {
     );
   }
 
-  Future<List<pw.TableRow>> _buildTableRows(RenderNode node,
-      {bool isHeaderRow = false}) async {
+  Future<List<pw.TableRow>> _buildTableRows(
+    RenderNode node, {
+    bool isHeaderRow = false,
+  }) async {
     final allCellSpans = <List<pw.InlineSpan>>[];
     final cellStyles = <RenderNode>[];
     final alignments = <pw.Alignment>[];
@@ -421,7 +445,7 @@ class PdfBuilder {
               ? pw.BoxDecoration(color: node.style.backgroundColor)
               : null,
           children: cells,
-        )
+        ),
       ];
     }
 
@@ -441,9 +465,13 @@ class PdfBuilder {
 
         if (cellHasImage[cellIdx]) {
           if (chunkIdx == 0) {
-            final cellContent =
-                await _buildCellContentWithImages(child, isHeader);
-            cells.add(_wrapCell(child, cellContent, alignments[cellIdx], isHeader));
+            final cellContent = await _buildCellContentWithImages(
+              child,
+              isHeader,
+            );
+            cells.add(
+              _wrapCell(child, cellContent, alignments[cellIdx], isHeader),
+            );
           } else {
             cells.add(pw.SizedBox());
           }
@@ -455,8 +483,14 @@ class PdfBuilder {
           // Only show background/decoration on the first chunk row for headers
           // or if requested specifically.
           final showDecor = chunkIdx == 0;
-          cells.add(_wrapCell(child, cellContent, alignments[cellIdx],
-              showDecor ? isHeader : false));
+          cells.add(
+            _wrapCell(
+              child,
+              cellContent,
+              alignments[cellIdx],
+              showDecor ? isHeader : false,
+            ),
+          );
         } else {
           cells.add(pw.SizedBox());
         }
@@ -467,7 +501,6 @@ class PdfBuilder {
     return tableRows;
   }
 
-
   bool _containsImage(RenderNode node) {
     if (node.tagName == 'img') return true;
     for (final child in node.children) {
@@ -477,7 +510,9 @@ class PdfBuilder {
   }
 
   Future<pw.Widget> _buildCellContentWithImages(
-      RenderNode node, bool isHeader) async {
+    RenderNode node,
+    bool isHeader,
+  ) async {
     final widgets = await _buildBlockContent(node);
     if (widgets.isEmpty) return pw.SizedBox();
     if (widgets.length == 1) return widgets.first;
@@ -487,8 +522,12 @@ class PdfBuilder {
     );
   }
 
-  pw.Widget _wrapCell(RenderNode node, pw.Widget content,
-      pw.Alignment alignment, bool isHeader) {
+  pw.Widget _wrapCell(
+    RenderNode node,
+    pw.Widget content,
+    pw.Alignment alignment,
+    bool isHeader,
+  ) {
     final hasDecoration = node.style.backgroundColor != null || isHeader;
 
     if (!hasDecoration && alignment == pw.Alignment.centerLeft) {
@@ -553,15 +592,17 @@ class PdfBuilder {
                 text: text.substring(0, limit),
                 style: span.style,
                 annotation: span.annotation,
-              )
+              ),
             ]);
             text = text.substring(limit);
           }
-          currentChunk.add(pw.TextSpan(
-            text: text,
-            style: span.style,
-            annotation: span.annotation,
-          ));
+          currentChunk.add(
+            pw.TextSpan(
+              text: text,
+              style: span.style,
+              annotation: span.annotation,
+            ),
+          );
           currentLen = text.length;
         }
       } else {
@@ -583,7 +624,10 @@ class PdfBuilder {
   }
 
   Future<pw.Widget> _buildListItem(
-      RenderNode node, bool isOrdered, int index) async {
+    RenderNode node,
+    bool isOrdered,
+    int index,
+  ) async {
     // Collect inline content from list item
     final spans = <pw.InlineSpan>[];
     await _collectInlineSpans(node, spans);
@@ -638,21 +682,29 @@ class PdfBuilder {
 
         final tableRows = <pw.TableRow>[];
         for (var i = 0; i < children.length; i++) {
-          tableRows.add(pw.TableRow(children: [
-            i == 0
-                ? pw.Container(
-                    alignment: pw.Alignment.topRight,
-                    padding: const pw.EdgeInsets.only(right: 5),
-                    child: bullet)
-                : pw.SizedBox(),
-            children[i]
-          ]));
+          tableRows.add(
+            pw.TableRow(
+              children: [
+                i == 0
+                    ? pw.Container(
+                        alignment: pw.Alignment.topRight,
+                        padding: const pw.EdgeInsets.only(right: 5),
+                        child: bullet,
+                      )
+                    : pw.SizedBox(),
+                children[i],
+              ],
+            ),
+          );
         }
 
-        return pw.Table(columnWidths: {
-          0: const pw.FixedColumnWidth(20),
-          1: const pw.FlexColumnWidth(),
-        }, children: tableRows);
+        return pw.Table(
+          columnWidths: {
+            0: const pw.FixedColumnWidth(20),
+            1: const pw.FlexColumnWidth(),
+          },
+          children: tableRows,
+        );
       }
       return pw.SizedBox();
     }
@@ -661,20 +713,25 @@ class PdfBuilder {
     // But text > 1 page wraps. Row DOES NOT WRAP/SPAN.
     // So even for text, we should use Table for robustness!
 
-    return pw.Table(columnWidths: {
-      0: const pw.FixedColumnWidth(20),
-      1: const pw.FlexColumnWidth(),
-    }, children: [
-      pw.TableRow(
+    return pw.Table(
+      columnWidths: {
+        0: const pw.FixedColumnWidth(20),
+        1: const pw.FlexColumnWidth(),
+      },
+      children: [
+        pw.TableRow(
           verticalAlignment: pw.TableCellVerticalAlignment.middle,
           children: [
             pw.Container(
-                alignment: pw.Alignment.topRight,
-                padding: const pw.EdgeInsets.only(right: 5),
-                child: bullet),
-            contentWidget
-          ])
-    ]);
+              alignment: pw.Alignment.topRight,
+              padding: const pw.EdgeInsets.only(right: 5),
+              child: bullet,
+            ),
+            contentWidget,
+          ],
+        ),
+      ],
+    );
   }
 
   pw.Widget _buildCheckbox(RenderNode node) {
@@ -747,7 +804,8 @@ class PdfBuilder {
 
     // Use Padding instead of Container to allow spanning
     return pw.Padding(
-      padding: (const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 16)) +
+      padding:
+          (const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 16)) +
           (const pw.EdgeInsets.only(left: 12)),
       child: pw.Table(
         border: const pw.TableBorder(
@@ -763,7 +821,8 @@ class PdfBuilder {
     String text = _collectText(node);
 
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 8) +
+      padding:
+          const pw.EdgeInsets.symmetric(vertical: 8) +
           const pw.EdgeInsets.all(8),
       child: pw.Text(
         text,
@@ -817,7 +876,8 @@ class PdfBuilder {
 
     // Build decoration from node style
     final decoration = _buildBoxDecoration(node.style);
-    final hasDecoration = decoration != null ||
+    final hasDecoration =
+        decoration != null ||
         node.style.padding != null ||
         node.style.margin != null;
 
@@ -832,7 +892,7 @@ class PdfBuilder {
             padding: node.style.padding,
             margin: node.style.margin,
             decoration: decoration,
-          )
+          ),
         ];
       }
       return [];
@@ -855,8 +915,8 @@ class PdfBuilder {
           crossAxisAlignment: node.style.textAlign == pw.TextAlign.center
               ? pw.CrossAxisAlignment.center
               : node.style.textAlign == pw.TextAlign.right
-                  ? pw.CrossAxisAlignment.end
-                  : pw.CrossAxisAlignment.start,
+              ? pw.CrossAxisAlignment.end
+              : pw.CrossAxisAlignment.start,
           children: childrenWidgets,
         );
       }
@@ -877,7 +937,7 @@ class PdfBuilder {
           decoration: decoration,
           alignment: alignment,
           child: content,
-        )
+        ),
       ];
     }
 
@@ -949,30 +1009,34 @@ class PdfBuilder {
 
     // Add top spacing with background and top border
     if (topSpace > 0 || decoration != null) {
-      result.add(pw.Container(
-        height: topSpace > 0 ? topSpace : null,
-        padding: topSpace > 0 ? null : const pw.EdgeInsets.only(top: 8),
-        decoration: decoration != null
-            ? pw.BoxDecoration(
-                color: decoration.color,
-                border: decoration.border?.top != null
-                    ? pw.Border(top: decoration.border!.top)
-                    : null,
-              )
-            : null,
-      ));
+      result.add(
+        pw.Container(
+          height: topSpace > 0 ? topSpace : null,
+          padding: topSpace > 0 ? null : const pw.EdgeInsets.only(top: 8),
+          decoration: decoration != null
+              ? pw.BoxDecoration(
+                  color: decoration.color,
+                  border: decoration.border?.top != null
+                      ? pw.Border(top: decoration.border!.top)
+                      : null,
+                )
+              : null,
+        ),
+      );
     }
 
     // Apply background and horizontal padding to each child
     for (final child in children) {
       if (decoration?.color != null || leftPad > 0 || rightPad > 0) {
-        result.add(pw.Container(
-          padding: pw.EdgeInsets.only(left: leftPad, right: rightPad),
-          decoration: decoration?.color != null
-              ? pw.BoxDecoration(color: decoration!.color)
-              : null,
-          child: child,
-        ));
+        result.add(
+          pw.Container(
+            padding: pw.EdgeInsets.only(left: leftPad, right: rightPad),
+            decoration: decoration?.color != null
+                ? pw.BoxDecoration(color: decoration!.color)
+                : null,
+            child: child,
+          ),
+        );
       } else {
         result.add(child);
       }
@@ -980,24 +1044,29 @@ class PdfBuilder {
 
     // Add bottom spacing with background and bottom border
     if (bottomSpace > 0 || decoration != null) {
-      result.add(pw.Container(
-        height: bottomSpace > 0 ? bottomSpace : null,
-        padding: bottomSpace > 0 ? null : const pw.EdgeInsets.only(bottom: 8),
-        decoration: decoration != null
-            ? pw.BoxDecoration(
-                color: decoration.color,
-                border: decoration.border?.bottom != null
-                    ? pw.Border(bottom: decoration.border!.bottom)
-                    : null,
-              )
-            : null,
-      ));
+      result.add(
+        pw.Container(
+          height: bottomSpace > 0 ? bottomSpace : null,
+          padding: bottomSpace > 0 ? null : const pw.EdgeInsets.only(bottom: 8),
+          decoration: decoration != null
+              ? pw.BoxDecoration(
+                  color: decoration.color,
+                  border: decoration.border?.bottom != null
+                      ? pw.Border(bottom: decoration.border!.bottom)
+                      : null,
+                )
+              : null,
+        ),
+      );
     }
 
     return result;
   }
 
-  Future<List<pw.Widget>> _buildRichText(List<RenderNode> nodes, CSSStyle parentStyle) async {
+  Future<List<pw.Widget>> _buildRichText(
+    List<RenderNode> nodes,
+    CSSStyle parentStyle,
+  ) async {
     final spans = <pw.InlineSpan>[];
 
     for (var node in nodes) {
@@ -1015,12 +1084,14 @@ class PdfBuilder {
     if (totalLen > 2000 || spans.length > 20) {
       final chunks = _splitSpans(spans, 1500);
       return chunks
-          .map((chunk) => pw.RichText(
-                overflow: pw.TextOverflow.span,
-                text: pw.TextSpan(children: chunk),
-                textAlign: parentStyle.textAlign ?? pw.TextAlign.left,
-                textDirection: parentStyle.textDirection,
-              ))
+          .map(
+            (chunk) => pw.RichText(
+              overflow: pw.TextOverflow.span,
+              text: pw.TextSpan(children: chunk),
+              textAlign: parentStyle.textAlign ?? pw.TextAlign.left,
+              textDirection: parentStyle.textDirection,
+            ),
+          )
           .toList();
     }
 
@@ -1030,7 +1101,7 @@ class PdfBuilder {
         text: pw.TextSpan(children: spans),
         textAlign: parentStyle.textAlign ?? pw.TextAlign.left,
         textDirection: parentStyle.textDirection,
-      )
+      ),
     ];
   }
 
@@ -1060,7 +1131,10 @@ class PdfBuilder {
     return classAttr.split(RegExp(r'\s+')).contains(className);
   }
 
-  Future<void> _collectInlineSpans(RenderNode node, List<pw.InlineSpan> spans) async {
+  Future<void> _collectInlineSpans(
+    RenderNode node,
+    List<pw.InlineSpan> spans,
+  ) async {
     if (node.display == Display.none) return;
 
     // Handle checkbox inputs as inline widgets
@@ -1093,17 +1167,16 @@ class PdfBuilder {
         }
       }
 
-      spans.add(pw.WidgetSpan(
-        child: _buildCheckbox(node),
-        baseline: baseline,
-      ));
+      spans.add(pw.WidgetSpan(child: _buildCheckbox(node), baseline: baseline));
       return;
     }
 
     if (node.tagName == 'span') {
       InlineTagStyle? classStyle;
       if (node.attributes.containsKey('class')) {
-        for (final className in node.attributes['class']!.split(RegExp(r'\s+'))) {
+        for (final className in node.attributes['class']!.split(
+          RegExp(r'\s+'),
+        )) {
           if (className.isEmpty) continue;
           final style = tagStyle.inlineClassStyles[className];
           if (style != null) {
@@ -1124,7 +1197,11 @@ class PdfBuilder {
           }
         }
 
-        final textContent = _collectInlineText(node).replaceAll(RegExp(r'\s+'), ' ');
+        // For class-styled spans, preserve whitespace so manual spaces work as padding.
+        // Only collapse runs of multiple whitespace into a single space (browser-like).
+        var textContent = _collectInlineText(
+          node,
+        ).replaceAll(RegExp(r'\s+'), ' ');
         final hasImages = _containsImage(node);
 
         if (textContent.isNotEmpty || hasImages) {
@@ -1132,15 +1209,48 @@ class PdfBuilder {
             background: null,
             color: classStyle.textColor ?? _mapTextStyle(node.style).color,
           );
-          final bgColor = classStyle.backgroundColor ?? node.style.backgroundColor;
+          final bgColor =
+              classStyle.backgroundColor ?? node.style.backgroundColor;
           final borderColor = classStyle.borderColor;
           final borderWidth = classStyle.borderWidth;
-          final padding = classStyle.padding;
+          final paddingH = classStyle.effectiveHorizontalPadding;
+          final paddingV = classStyle.effectiveVerticalPadding;
           final borderRadius = classStyle.borderRadius;
 
-          pw.Widget childWidget;
-          if (hasImages) {
-            // Build a Row with text and image widgets
+          // Build the BoxDecoration for the background/border. Text-only spans
+          // use a measured custom widget so padding can be applied without
+          // expanding to the full RichText line width.
+          final decoration = pw.BoxDecoration(
+            color: bgColor,
+            border: borderColor != null && borderWidth > 0
+                ? pw.Border.all(color: borderColor, width: borderWidth)
+                : null,
+            borderRadius: borderRadius != null
+                ? pw.BorderRadius.circular(borderRadius)
+                : null,
+          );
+
+          if (!hasImages) {
+            final double fontSize = baseStyle.fontSize ?? 12;
+            spans.add(
+              pw.WidgetSpan(
+                baseline: -fontSize * 0.5,
+                style: baseStyle,
+                child: _InlineDecoratedText(
+                  text: textContent,
+                  style: baseStyle,
+                  decoration: decoration,
+                  padding: pw.EdgeInsets.symmetric(
+                    horizontal: paddingH,
+                    vertical: paddingV,
+                  ),
+                ),
+              ),
+            );
+          } else {
+            // Has images: must use WidgetSpan + Container.
+            // Padding works here because the Container wraps the content.
+            final double fontSize = baseStyle.fontSize ?? 12;
             final rowChildren = <pw.Widget>[];
             if (textContent.isNotEmpty) {
               rowChildren.add(pw.Text(textContent, style: baseStyle));
@@ -1151,43 +1261,25 @@ class PdfBuilder {
                 rowChildren.add(imgWidget);
               }
             }
-            childWidget = pw.Container(
-              padding: pw.EdgeInsets.all(padding),
-              decoration: pw.BoxDecoration(
-                color: bgColor,
-                border: borderColor != null && borderWidth > 0
-                    ? pw.Border.all(color: borderColor, width: borderWidth)
-                    : null,
-                borderRadius: borderRadius != null
-                    ? pw.BorderRadius.circular(borderRadius)
-                    : null,
+            spans.add(
+              pw.WidgetSpan(
+                baseline: fontSize * 0.8,
+                child: pw.Container(
+                  padding: pw.EdgeInsets.symmetric(
+                    horizontal: paddingH,
+                    vertical: paddingV,
+                  ),
+                  decoration: decoration,
+                  alignment: pw.Alignment.centerLeft,
+                  child: pw.Row(
+                    mainAxisSize: pw.MainAxisSize.min,
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: rowChildren,
+                  ),
+                ),
               ),
-              child: pw.Row(
-                mainAxisSize: pw.MainAxisSize.min,
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: rowChildren,
-              ),
-            );
-          } else {
-            childWidget = pw.Container(
-              padding: pw.EdgeInsets.all(padding),
-              decoration: pw.BoxDecoration(
-                color: bgColor,
-                border: borderColor != null && borderWidth > 0
-                    ? pw.Border.all(color: borderColor, width: borderWidth)
-                    : null,
-                borderRadius: borderRadius != null
-                    ? pw.BorderRadius.circular(borderRadius)
-                    : null,
-              ),
-              child: pw.Text(textContent, style: baseStyle),
             );
           }
-
-          spans.add(pw.WidgetSpan(
-            baseline: 0,
-            child: childWidget,
-          ));
         }
         return;
       }
@@ -1195,7 +1287,9 @@ class PdfBuilder {
       // Handle spans with CSS rules from <style> blocks
       // Check if the span's computed style has border or padding from CSS
       if (node.style.border != null || node.style.padding != null) {
-        final textContent = _collectInlineText(node).replaceAll(RegExp(r'\s+'), ' ');
+        final textContent = _collectInlineText(
+          node,
+        ).replaceAll(RegExp(r'\s+'), ' ');
         if (textContent.isNotEmpty) {
           final baseStyle = _mapTextStyle(node.style);
           final bgColor = node.style.backgroundColor;
@@ -1203,25 +1297,31 @@ class PdfBuilder {
           final padding = node.style.padding;
           final borderRadius = node.style.borderRadius;
 
-          spans.add(pw.WidgetSpan(
-            baseline: 0,
-            child: pw.Container(
-              padding: padding,
-              decoration: pw.BoxDecoration(
-                color: bgColor,
-                border: border != null
-                    ? pw.Border.all(
-                        color: border.top.color ?? PdfColors.black,
-                        width: border.top.width,
-                      )
-                    : null,
-                borderRadius: borderRadius != null
-                    ? pw.BorderRadius.circular(borderRadius)
-                    : null,
+          // Baseline for WidgetSpan: distance from widget top to text's alphabetic baseline.
+          final double fontSize = baseStyle.fontSize ?? 12;
+          final double baselineOffset = fontSize * 0.8;
+
+          spans.add(
+            pw.WidgetSpan(
+              baseline: baselineOffset,
+              child: pw.Container(
+                padding: padding,
+                decoration: pw.BoxDecoration(
+                  color: bgColor,
+                  border: border != null
+                      ? pw.Border.all(
+                          color: border.top.color ?? PdfColors.black,
+                          width: border.top.width,
+                        )
+                      : null,
+                  borderRadius: borderRadius != null
+                      ? pw.BorderRadius.circular(borderRadius)
+                      : null,
+                ),
+                child: pw.Text(textContent, style: baseStyle),
               ),
-              child: pw.Text(textContent, style: baseStyle),
             ),
-          ));
+          );
         }
         return;
       }
@@ -1245,13 +1345,16 @@ class PdfBuilder {
         final baseStyle = _mapTextStyle(node.style).copyWith(background: null);
         final bgColor =
             tagStyle.inlineCodeBackgroundColor ?? node.style.backgroundColor;
-        spans.add(pw.TextSpan(
-          text: textContent,
-          style: baseStyle.copyWith(
-            background:
-                bgColor != null ? pw.BoxDecoration(color: bgColor) : null,
+        spans.add(
+          pw.TextSpan(
+            text: textContent,
+            style: baseStyle.copyWith(
+              background: bgColor != null
+                  ? pw.BoxDecoration(color: bgColor)
+                  : null,
+            ),
           ),
-        ));
+        );
       }
       return;
     }
@@ -1269,13 +1372,16 @@ class PdfBuilder {
       }
 
       if (text.isNotEmpty) {
-        spans.add(pw.TextSpan(
-          text: text,
-          style: _mapTextStyle(node.style),
-          annotation: node.tagName == 'a' && node.attributes.containsKey('href')
-              ? pw.AnnotationUrl(node.attributes['href']!)
-              : null,
-        ));
+        spans.add(
+          pw.TextSpan(
+            text: text,
+            style: _mapTextStyle(node.style),
+            annotation:
+                node.tagName == 'a' && node.attributes.containsKey('href')
+                ? pw.AnnotationUrl(node.attributes['href']!)
+                : null,
+          ),
+        );
       }
       return;
     }
@@ -1309,14 +1415,16 @@ class PdfBuilder {
         }
 
         if (text.isNotEmpty) {
-          spans.add(pw.TextSpan(
-            text: text,
-            style: _mapTextStyle(node.style), // Use parent's computed style
-            annotation:
-                node.tagName == 'a' && node.attributes.containsKey('href')
-                    ? pw.AnnotationUrl(node.attributes['href']!)
-                    : null,
-          ));
+          spans.add(
+            pw.TextSpan(
+              text: text,
+              style: _mapTextStyle(node.style), // Use parent's computed style
+              annotation:
+                  node.tagName == 'a' && node.attributes.containsKey('href')
+                  ? pw.AnnotationUrl(node.attributes['href']!)
+                  : null,
+            ),
+          );
         }
       } else {
         // Recurse for nested elements
@@ -1370,5 +1478,55 @@ class PdfBuilder {
           ? pw.BoxDecoration(color: style.backgroundColor)
           : null,
     );
+  }
+}
+
+class _InlineDecoratedText extends pw.Widget {
+  _InlineDecoratedText({
+    required this.text,
+    required this.style,
+    required this.decoration,
+    required this.padding,
+  }) : _text = pw.Text(text, style: style, softWrap: false);
+
+  final String text;
+  final pw.TextStyle style;
+  final pw.BoxDecoration decoration;
+  final pw.EdgeInsets padding;
+  final pw.Text _text;
+
+  @override
+  void layout(
+    pw.Context context,
+    pw.BoxConstraints constraints, {
+    bool parentUsesSize = false,
+  }) {
+    _text.layout(context, const pw.BoxConstraints(), parentUsesSize: true);
+    final childBox = _text.box!;
+    final size = constraints.constrain(
+      PdfPoint(
+        childBox.width + padding.horizontal,
+        childBox.height + padding.vertical,
+      ),
+    );
+
+    box = PdfRect.fromPoints(PdfPoint.zero, size);
+    _text.box = PdfRect.fromPoints(
+      PdfPoint(padding.left, padding.bottom),
+      PdfPoint(size.x - padding.right, size.y - padding.top),
+    );
+  }
+
+  @override
+  void paint(pw.Context context) {
+    super.paint(context);
+    decoration.paint(context, box!);
+    final childBox = _text.box!;
+    _text.box = PdfRect.fromPoints(
+      PdfPoint(box!.left + childBox.left, box!.bottom + childBox.bottom),
+      PdfPoint(childBox.width, childBox.height),
+    );
+    _text.paint(context);
+    _text.box = childBox;
   }
 }
