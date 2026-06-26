@@ -634,7 +634,9 @@ class PdfBuilder {
   ) async {
     // Collect inline content from list item
     final spans = <pw.InlineSpan>[];
-    await _collectInlineSpans(node, spans);
+    if (_hasOnlyInlineContent(node)) {
+      await _collectInlineSpans(node, spans);
+    }
 
     pw.Widget bullet;
     if (isOrdered) {
@@ -684,12 +686,32 @@ class PdfBuilder {
         // Actually, simplest is to just flatten it and accept bullet alignment might be tricky?
         // Or use Table.
 
+        int bulletIndex = 0;
+        for (var i = 0; i < children.length; i++) {
+          final child = children[i];
+          bool isSpacer = false;
+          if (child is pw.Container &&
+              child.child == null &&
+              child.decoration == null) {
+            isSpacer = true;
+          } else if (child is pw.SizedBox && child.child == null) {
+            isSpacer = true;
+          }
+          if (!isSpacer) {
+            bulletIndex = i;
+            break;
+          }
+        }
+
         final tableRows = <pw.TableRow>[];
         for (var i = 0; i < children.length; i++) {
           tableRows.add(
             pw.TableRow(
+              verticalAlignment: i == bulletIndex
+                  ? pw.TableCellVerticalAlignment.middle
+                  : pw.TableCellVerticalAlignment.top,
               children: [
-                i == 0
+                i == bulletIndex
                     ? pw.Container(
                         alignment: pw.Alignment.topRight,
                         padding: const pw.EdgeInsets.only(right: 5),
