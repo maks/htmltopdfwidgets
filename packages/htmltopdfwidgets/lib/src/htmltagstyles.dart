@@ -194,6 +194,10 @@ class HtmlTagStyle {
   /// Color for the unchecked checkbox icon (used when rendering default or SVG).
   final PdfColor? uncheckedIconColor;
 
+  /// When true, inserts a page break before h2-h6 headings so they never
+  /// appear as orphans at the bottom of a page. Default is false.
+  final bool headingPageBreak;
+
   const HtmlTagStyle({
     this.boldStyle,
     this.italicStyle,
@@ -242,5 +246,6 @@ class HtmlTagStyle {
     this.checkboxSize = 14.0,
     this.checkedIconColor,
     this.uncheckedIconColor,
+    this.headingPageBreak = false,
   });
 }

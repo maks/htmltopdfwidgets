@@ -139,7 +139,9 @@ class PdfBuilder {
           widgets.addAll(await _buildBlockChild(child));
         }
 
-        // Add spacing between block elements
+        // Add small spacing between block elements, but skip it when the
+        // next element is a heading and headingPageBreak is enabled — the
+        // page break already provides sufficient separation.
         if (widgets.isNotEmpty && i < node.children.length - 1) {
           final nextNonEmpty = node.children
               .skip(i + 1)
@@ -150,8 +152,13 @@ class PdfBuilder {
                 orElse: () => RenderNode(tagName: '', style: const CSSStyle()),
               );
           if (nextNonEmpty.tagName.isNotEmpty) {
-            // Add small spacing between block elements
-            widgets.add(pw.SizedBox(height: 4));
+            final skipGap = tagStyle.headingPageBreak &&
+                ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']
+                    .contains(nextNonEmpty.tagName);
+            if (!skipGap) {
+              // Add small spacing between block elements
+              widgets.add(pw.SizedBox(height: 4));
+            }
           }
         }
       }
@@ -874,6 +881,14 @@ class PdfBuilder {
     // Recursive call to get children widgets
     final childrenWidgets = await _buildBlock(node);
 
+    final prefixWidgets = <pw.Widget>[];
+    if (tagStyle.headingPageBreak &&
+        ['h2', 'h3', 'h4', 'h5', 'h6'].contains(node.tagName)) {
+      // Use freeSpace to only force a page break if the heading is near the bottom
+      // of the page, preventing it from being orphaned.
+      prefixWidgets.add(pw.NewPage(freeSpace: 250));
+    }
+
     // Build decoration from node style
     final decoration = _buildBoxDecoration(node.style);
     final hasDecoration =
@@ -886,6 +901,7 @@ class PdfBuilder {
       if (hasDecoration &&
           (node.style.width != null || node.style.height != null)) {
         return [
+          ...prefixWidgets,
           pw.Container(
             width: node.style.width,
             height: node.style.height,
@@ -895,7 +911,7 @@ class PdfBuilder {
           ),
         ];
       }
-      return [];
+      return prefixWidgets;
     }
 
     // Determine if this is a "small" block that can safely use Container wrapper
@@ -930,6 +946,7 @@ class PdfBuilder {
       }
 
       return [
+        ...prefixWidgets,
         pw.Container(
           width: node.style.width,
           padding: node.style.padding,
@@ -944,11 +961,14 @@ class PdfBuilder {
     // Large structural blocks - apply decorations to individual children
     // This enables page spanning while preserving visual styling
     if (hasDecoration) {
-      return _applyBlockDecorationToChildren(
-        childrenWidgets,
-        node.style,
-        decoration,
-      );
+      return [
+        ...prefixWidgets,
+        ..._applyBlockDecorationToChildren(
+          childrenWidgets,
+          node.style,
+          decoration,
+        ),
+      ];
     }
 
     // No decoration - just return children with spacing
@@ -957,7 +977,7 @@ class PdfBuilder {
     final bottomSpace =
         (node.style.margin?.bottom ?? 0) + (node.style.padding?.bottom ?? 0);
 
-    final result = <pw.Widget>[];
+    final result = <pw.Widget>[...prefixWidgets];
     if (topSpace > 0) result.add(pw.SizedBox(height: topSpace));
     result.addAll(childrenWidgets);
     if (bottomSpace > 0) result.add(pw.SizedBox(height: bottomSpace));
@@ -973,7 +993,8 @@ class PdfBuilder {
       return true;
     }
 
-    // Only headers are truly guaranteed to be small
+    // All heading levels are small blocks — they fit on one line or at most
+    // a few lines, so there is no need for page-spanning.
     if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].contains(node.tagName)) {
       return true;
     }
