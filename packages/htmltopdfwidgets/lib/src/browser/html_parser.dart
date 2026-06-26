@@ -119,12 +119,15 @@ class HtmlParser {
 
     // 3.1.1 Apply block class-based styles from tagStyle
     final classAttr = element.attributes['class'];
-    if (classAttr != null && classAttr.isNotEmpty && tagStyle.blockClassStyles.isNotEmpty) {
+    if (classAttr != null &&
+        classAttr.isNotEmpty &&
+        tagStyle.blockClassStyles.isNotEmpty) {
       for (final className in classAttr.split(RegExp(r'\s+'))) {
         if (className.isEmpty) continue;
         final classStyle = tagStyle.blockClassStyles[className];
         if (classStyle != null) {
-          computedStyle = computedStyle.merge(_convertBlockTagStyleToCSSStyle(classStyle));
+          computedStyle =
+              computedStyle.merge(_convertBlockTagStyleToCSSStyle(classStyle));
         }
       }
     }
@@ -183,10 +186,10 @@ class HtmlParser {
   /// get font-family: 'heading', and code/pre tags get font-family: 'code'.
   CSSStyle _getDefaultStyleForTag(String tagName) {
     CSSStyle style;
-    final bool hasHeadingFont = customFonts != null &&
-        customFonts!.containsKey('heading');
-    final bool hasCodeFont = customFonts != null &&
-        customFonts!.containsKey('code');
+    final bool hasHeadingFont =
+        customFonts != null && customFonts!.containsKey('heading');
+    final bool hasCodeFont =
+        customFonts != null && customFonts!.containsKey('code');
     switch (tagName.toLowerCase()) {
       case 'h1':
         style = const CSSStyle(
@@ -337,7 +340,10 @@ class HtmlParser {
             margin: EdgeInsets.only(bottom: 4.0),
             padding: EdgeInsets.only(left: 20.0));
         if (tagStyle.listMargin != null) {
-          style = style.merge(CSSStyle(margin: tagStyle.listMargin));
+          style = CSSStyle(
+              display: Display.block,
+              margin: tagStyle.listMargin,
+              padding: const EdgeInsets.all(0.0));
         }
         return style;
       case 'li':
@@ -444,11 +450,11 @@ class HtmlParser {
       padding: blockStyle.padding != null
           ? EdgeInsets.all(blockStyle.padding!)
           : null,
-      margin: blockStyle.margin != null
-          ? EdgeInsets.all(blockStyle.margin!)
-          : null,
+      margin:
+          blockStyle.margin != null ? EdgeInsets.all(blockStyle.margin!) : null,
       border: blockStyle.borderColor != null && blockStyle.borderWidth > 0
-          ? Border.all(color: blockStyle.borderColor!, width: blockStyle.borderWidth)
+          ? Border.all(
+              color: blockStyle.borderColor!, width: blockStyle.borderWidth)
           : null,
       borderRadius: blockStyle.borderRadius,
     );

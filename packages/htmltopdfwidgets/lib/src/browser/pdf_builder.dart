@@ -3,8 +3,7 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../htmltagstyles.dart';
 import 'css_style.dart';
-import 'image_builder_io.dart'
-    if (dart.library.html) 'image_builder_web.dart'
+import 'image_builder_io.dart' if (dart.library.html) 'image_builder_web.dart'
     as image_builder;
 import 'render_node.dart';
 
@@ -143,9 +142,7 @@ class PdfBuilder {
         // next element is a heading and headingPageBreak is enabled — the
         // page break already provides sufficient separation.
         if (widgets.isNotEmpty && i < node.children.length - 1) {
-          final nextNonEmpty = node.children
-              .skip(i + 1)
-              .firstWhere(
+          final nextNonEmpty = node.children.skip(i + 1).firstWhere(
                 (n) =>
                     n.display != Display.none && n.tagName != '#text' ||
                     (n.text?.trim().isNotEmpty ?? false),
@@ -364,17 +361,17 @@ class PdfBuilder {
         border: border == null
             ? null
             : (borderCollapse
-                  ? pw.TableBorder.all(color: borderColor, width: borderWidth)
-                  : pw.TableBorder.symmetric(
-                      inside: pw.BorderSide(
-                        color: borderColor,
-                        width: borderWidth,
-                      ),
-                      outside: pw.BorderSide(
-                        color: borderColor,
-                        width: borderWidth,
-                      ),
-                    )),
+                ? pw.TableBorder.all(color: borderColor, width: borderWidth)
+                : pw.TableBorder.symmetric(
+                    inside: pw.BorderSide(
+                      color: borderColor,
+                      width: borderWidth,
+                    ),
+                    outside: pw.BorderSide(
+                      color: borderColor,
+                      width: borderWidth,
+                    ),
+                  )),
         defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
         columnWidths: columnWidths.isEmpty ? null : columnWidths,
         defaultColumnWidth: const pw.FlexColumnWidth(),
@@ -811,8 +808,7 @@ class PdfBuilder {
 
     // Use Padding instead of Container to allow spanning
     return pw.Padding(
-      padding:
-          (const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 16)) +
+      padding: (const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 16)) +
           (const pw.EdgeInsets.only(left: 12)),
       child: pw.Table(
         border: const pw.TableBorder(
@@ -828,8 +824,7 @@ class PdfBuilder {
     String text = _collectText(node);
 
     return pw.Padding(
-      padding:
-          const pw.EdgeInsets.symmetric(vertical: 8) +
+      padding: const pw.EdgeInsets.symmetric(vertical: 8) +
           const pw.EdgeInsets.all(8),
       child: pw.Text(
         text,
@@ -891,8 +886,7 @@ class PdfBuilder {
 
     // Build decoration from node style
     final decoration = _buildBoxDecoration(node.style);
-    final hasDecoration =
-        decoration != null ||
+    final hasDecoration = decoration != null ||
         node.style.padding != null ||
         node.style.margin != null;
 
@@ -931,8 +925,8 @@ class PdfBuilder {
           crossAxisAlignment: node.style.textAlign == pw.TextAlign.center
               ? pw.CrossAxisAlignment.center
               : node.style.textAlign == pw.TextAlign.right
-              ? pw.CrossAxisAlignment.end
-              : pw.CrossAxisAlignment.start,
+                  ? pw.CrossAxisAlignment.end
+                  : pw.CrossAxisAlignment.start,
           children: childrenWidgets,
         );
       }
@@ -1370,9 +1364,8 @@ class PdfBuilder {
           pw.TextSpan(
             text: textContent,
             style: baseStyle.copyWith(
-              background: bgColor != null
-                  ? pw.BoxDecoration(color: bgColor)
-                  : null,
+              background:
+                  bgColor != null ? pw.BoxDecoration(color: bgColor) : null,
             ),
           ),
         );
@@ -1399,8 +1392,8 @@ class PdfBuilder {
             style: _mapTextStyle(node.style),
             annotation:
                 node.tagName == 'a' && node.attributes.containsKey('href')
-                ? pw.AnnotationUrl(node.attributes['href']!)
-                : null,
+                    ? pw.AnnotationUrl(node.attributes['href']!)
+                    : null,
           ),
         );
       }
@@ -1442,8 +1435,8 @@ class PdfBuilder {
               style: _mapTextStyle(node.style), // Use parent's computed style
               annotation:
                   node.tagName == 'a' && node.attributes.containsKey('href')
-                  ? pw.AnnotationUrl(node.attributes['href']!)
-                  : null,
+                      ? pw.AnnotationUrl(node.attributes['href']!)
+                      : null,
             ),
           );
         }
