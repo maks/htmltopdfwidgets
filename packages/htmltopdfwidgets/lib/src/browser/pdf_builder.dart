@@ -55,6 +55,11 @@ class PdfBuilder {
 
     if (node.display == Display.none) return widgets;
 
+    // Handle picosite pagebreak shortcode
+    if (node.attributes['data-picosite-pagebreak'] == 'true') {
+      return [pw.NewPage()];
+    }
+
     // Handle specific tags that map to specific Widgets
     if (node.tagName == 'img') {
       return [await _buildImage(node)];

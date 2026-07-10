@@ -95,6 +95,22 @@ void main() {
       pdf.addPage(pw.MultiPage(build: (c) => widgets));
     });
 
+    test('Build PDF with explicit picosite page break marker', () async {
+      const html = '''
+        <h2>Before</h2>
+        <div data-picosite-pagebreak="true"></div>
+        <h2>After</h2>
+      ''';
+      final widgets = await HTMLToPdf().convert(html, useNewEngine: true);
+
+      final newPageType = pw.NewPage().runtimeType;
+      expect(widgets.where((widget) => widget.runtimeType == newPageType),
+          hasLength(1));
+      expect(
+          widgets.indexWhere((widget) => widget.runtimeType == newPageType), 2);
+      pdf.addPage(pw.MultiPage(build: (c) => widgets));
+    });
+
     test('Build PDF with lists', () async {
       const html = '''
         <ul>
